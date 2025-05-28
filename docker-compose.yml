@@ -1,0 +1,64 @@
+services:
+  api:
+    build: .
+    command: python3 src/main.py
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+      - redis
+      - rabbitmq
+
+  worker:
+    build: .
+    command: python3 src/worker.py
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+      - redis
+      - rabbitmq
+
+  alembic:
+    build: .
+    command: alembic upgrade head
+    restart: on-failure:5
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:latest
+    container_name: mysql
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:latest
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    command: >
+      bash -c "rabbitmq-plugins enable --offline rabbitmq_management &&
+             rabbitmq-server"
+    env_file:
+      - .env
+
+volumes:
+  mysql_data:
